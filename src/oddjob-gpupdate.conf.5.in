@@ -1,0 +1,15 @@
+.TH oddjob-gpupdate.conf 5 "26 August 2019" "oddjob @PACKAGE_VERSION@" "oddjob Manual"
+
+.SH NAME
+oddjob-gpupdate.conf - system message bus configuration for oddjob-gpupdate
+
+.SH DESCRIPTION
+The @mysysconfdir@/@DBUS_PACKAGE@/system.d/\fIoddjob-gpupdate.conf\fR
+configuration file specifies D-Bus-level access controls for the
+\fI@NAMESPACE@.oddjob_gpupdate\fR service, in particular which users can
+invoke methods provided by the service.  For more information, please see the
+D-Bus documentation.
+
+.SH SEE ALSO
+\fBdbus-daemon\fR(1)
+\fBoddjobd\fR(8)

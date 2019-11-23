@@ -1,0 +1,10 @@
+#!/bin/sh
+case "$1" in
+-*)
+	echo Usage: gpupdatefor username [...]
+	exit 1
+	;;
+esac
+for user in "$@" ; do
+	dbus-send --system --dest=@NAMESPACE@.oddjob_gpupdate --print-reply / @NAMESPACE@.oddjob_gpupdate.gpupdatefor string:"$user"
+done

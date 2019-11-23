@@ -1,0 +1,21 @@
+.TH oddjobd-gpupdate.conf 5 "26 August 2019" "oddjob Manual"
+
+.SH NAME
+oddjobd-gpupdate.conf - allow limited use of the gpupdate functions
+
+.SH DESCRIPTION
+The \fB@mysysconfdir@/oddjobd.conf.d/oddjobd-gpupdate.conf\fR is typically
+processed along with other files in the \fB@mysysconfdir@/oddjobd.conf.d\fR
+directory.
+
+The gpupdate helper itself accepts these options:
+.TP
+-q
+Refrain from outputting the usual "Apply group policies for..." message when it
+applies group policies.
+.TP
+-p
+Override the group policy applier binary (by default: \fI/usr/sbin/gpoa\fR).
+
+.SH SEE ALSO
+\fBoddjob.conf\fR(5)
