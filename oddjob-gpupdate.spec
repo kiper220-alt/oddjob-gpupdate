@@ -46,6 +46,12 @@ mv %buildroot%_libdir/security/pam_oddjob_gpupdate.so \
 %buildroot/%_lib/security/
 rm %buildroot%_libdir/security/pam_oddjob_gpupdate.la
 
+%post
+%post_service oddjobd
+
+%preun
+%preun_service oddjobd
+
 %files
 %doc COPYING src/gpupdatefor src/gpupdateforme
 %_libexecdir/oddjob/gpupdate
