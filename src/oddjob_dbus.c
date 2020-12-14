@@ -636,7 +636,7 @@ static DBusHandlerResult
 oddjob_dbus_filter(DBusConnection *conn, DBusMessage *message, void *user_data)
 {
 	struct oddjob_dbus_context *ctx;
-	struct oddjob_dbus_service *srv;
+	struct oddjob_dbus_service *srv = NULL;
 	struct oddjob_dbus_object *obj;
 	struct oddjob_dbus_interface *interface;
 	struct oddjob_dbus_method *method;
