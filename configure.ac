@@ -57,7 +57,7 @@ AC_SUBST(PAM_LIBS)
 AM_CONDITIONAL(BUILD_PAM,test x$pam = xyes)
 
 dnl Oh, for the clear management of OID arcs....
-NAMESPACE=com.redhat
+NAMESPACE=ru.basealt
 AC_SUBST(NAMESPACE)
 NAMESPACEPATH=`echo "$NAMESPACE" | sed -e 's,^,/,' -e 's,\.,/,g'`
 AC_SUBST(NAMESPACEPATH)
