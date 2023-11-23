@@ -29,6 +29,7 @@
  */
 
 #include "../config.h"
+#include <security/_pam_types.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -73,7 +74,7 @@ conv_text_info(pam_handle_t *pamh, const char *info)
 }
 
 static void
-send_pam_oddjob_gpupdate_request(pam_handle_t *pamh)
+send_pam_oddjob_gpupdate_request(pam_handle_t *pamh, int argc, const char **argv)
 {
 	const char *user;
 	char *buf, *reply = NULL;
@@ -84,6 +85,25 @@ send_pam_oddjob_gpupdate_request(pam_handle_t *pamh)
 	int ret, result;
 
 	user = NULL;
+
+	int dbus_timeout_milliseconds = -1;
+	int dbus_timeout_flag = 0;
+
+	for (int i = 0; i < argc; i++) {
+		if (strcmp(argv[i], "dbus_timeout") == 0) {
+			dbus_timeout_flag = 1;
+			continue;
+		}
+		if (dbus_timeout_flag > 0) {
+			dbus_timeout_milliseconds = atoi(argv[i]) * 1000;
+			if (dbus_timeout_milliseconds == 0) {
+				dbus_timeout_milliseconds = -1;
+			}
+		}
+	}
+	char info[128];
+	snprintf (info, 128, "D-Bus oddjob timeout is %d", dbus_timeout_milliseconds);
+	conv_text_info(pamh, info);
 
 	if ((pam_get_user(pamh, &user, "login: ") == PAM_SUCCESS) &&
 	    (user != NULL) &&
@@ -118,7 +138,7 @@ send_pam_oddjob_gpupdate_request(pam_handle_t *pamh)
 						      ODDJOB_INTERFACE_NAME "_gpupdate",
 						      "gpupdatefor",
 						      &result,
-						      -1,
+						      dbus_timeout_milliseconds,
 						      &reply,
 						      &reply_size,
 						      NULL,
@@ -145,7 +165,7 @@ send_pam_oddjob_gpupdate_request(pam_handle_t *pamh)
 int
 pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
-	send_pam_oddjob_gpupdate_request(pamh);
+	send_pam_oddjob_gpupdate_request(pamh, argc, argv);
 	return PAM_IGNORE;
 }
 int
@@ -157,6 +177,6 @@ pam_sm_close_session(pam_handle_t *pamh, int flags, int argc, const char **argv)
 int
 pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
-	send_pam_oddjob_gpupdate_request(pamh);
+	send_pam_oddjob_gpupdate_request(pamh, argc, argv);
 	return PAM_IGNORE;
 }
