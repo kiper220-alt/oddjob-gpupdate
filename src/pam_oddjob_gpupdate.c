@@ -42,6 +42,21 @@
 #include "oddjob_dbus.h"
 #include <stdio.h>
 
+#define PAM_DEBUG_ARG       01
+#define PAM_DBUS_TIMEOUT    02
+
+/*
+ * Got from internal linux-pam pam_inline.h header.
+ * Returns NULL if STR does not start with PREFIX,
+ * or a pointer to the first char in STR after PREFIX.
+ * The length of PREFIX is specified by PREFIX_LEN.
+ */
+static inline const char *
+_pam_str_skip_prefix_len(const char *str, const char *prefix, size_t prefix_len)
+{
+	return strncmp(str, prefix, prefix_len) ? NULL : str + prefix_len;
+}
+
 static void
 conv_text_info(pam_handle_t *pamh, const char *info)
 {
@@ -73,37 +88,55 @@ conv_text_info(pam_handle_t *pamh, const char *info)
 	}
 }
 
+static int
+parse_args(pam_handle_t *pamh, int argc, const char **argv, int *dbus_timeout)
+{
+	int intarg, optmask = 0;
+	char info[128];
+
+	for (optmask = 0; argc-- > 0; ++argv) {
+		const char *str;
+
+		if (!strcmp(*argv, "debug"))
+			optmask |= PAM_DEBUG_ARG;
+		else if ((str = _pam_str_skip_prefix_len(*argv, "dbus_timeout=", 13)) != NULL) {
+			if (sscanf(str, "%d", &intarg) != 1) {
+				if (optmask & PAM_DEBUG_ARG) {
+					snprintf (info, 128, "Ignore bad gpupdate dbus_timeout option value: %s", str);
+					conv_text_info(pamh, info);
+				}
+			} else {
+				optmask |= PAM_DBUS_TIMEOUT;
+				*dbus_timeout = intarg * 1000;
+			}
+		} else if (optmask & PAM_DEBUG_ARG) {
+			snprintf (info, 128, "Ignore gpupdate unknown option: %s", *argv);
+			conv_text_info(pamh, info);
+		}
+	}
+
+	return optmask;
+}
+
 static void
 send_pam_oddjob_gpupdate_request(pam_handle_t *pamh, int argc, const char **argv)
 {
-	const char *user;
+	const char *user = NULL;
 	char *buf, *reply = NULL;
 	ssize_t reply_size = -1;
 	size_t bufsize;
 	struct passwd pwd, *pw;
-	struct stat st;
 	int ret, result;
 
-	user = NULL;
+	/* Dbus request timeout in milliseconds */
+	int dbus_timeout = -1;
+	int arg_flags = parse_args(pamh, argc, argv, &dbus_timeout);
 
-	int dbus_timeout_milliseconds = -1;
-	int dbus_timeout_flag = 0;
-
-	for (int i = 0; i < argc; i++) {
-		if (strcmp(argv[i], "dbus_timeout") == 0) {
-			dbus_timeout_flag = 1;
-			continue;
-		}
-		if (dbus_timeout_flag > 0) {
-			dbus_timeout_milliseconds = atoi(argv[i]) * 1000;
-			if (dbus_timeout_milliseconds == 0) {
-				dbus_timeout_milliseconds = -1;
-			}
-		}
+	if (arg_flags & PAM_DEBUG_ARG) {
+		char info[128];
+		snprintf (info, 128, "D-Bus oddjob timeout is %d", dbus_timeout);
+		conv_text_info(pamh, info);
 	}
-	char info[128];
-	snprintf (info, 128, "D-Bus oddjob timeout is %d", dbus_timeout_milliseconds);
-	conv_text_info(pamh, info);
 
 	if ((pam_get_user(pamh, &user, "login: ") == PAM_SUCCESS) &&
 	    (user != NULL) &&
@@ -138,14 +171,14 @@ send_pam_oddjob_gpupdate_request(pam_handle_t *pamh, int argc, const char **argv
 						      ODDJOB_INTERFACE_NAME "_gpupdate",
 						      "gpupdatefor",
 						      &result,
-						      dbus_timeout_milliseconds,
+						      dbus_timeout,
 						      &reply,
 						      &reply_size,
 						      NULL,
 						      0,
 						      user,
 						      NULL);
-			} else {
+			} else if (arg_flags & PAM_DEBUG_ARG) {
 				char info[128];
 				snprintf (info, 128, "Ignore gpupdate for user %s with uid %d", pw->pw_name, pw->pw_uid);
 				conv_text_info(pamh, info);
