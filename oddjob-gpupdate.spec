@@ -10,7 +10,6 @@ License: %bsdstyle
 Url: https://github.com/altlinux/oddjob-gpupdate.git
 
 Source: %name-%version.tar
-Patch: %name-%version-alt.patch
 
 Requires: oddjob
 
@@ -28,7 +27,6 @@ pam_oddjob_gpupdate module to applies group policy objects at login-time.
 
 %prep
 %setup
-%patch -p1
 
 %build
 %autoreconf
