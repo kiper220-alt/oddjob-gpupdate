@@ -49,12 +49,12 @@
 #include "util.h"
 
 #define _(_x) _x
-
 static const char *exe;
 static const char *gpo_exe;
 static struct passwd *pwd;
 
 #define FLAG_QUIET	(1 << 1)
+#define FLAG_FORCE	(1 << 2)
 
 /*
  * get_gpo_dir
@@ -69,7 +69,7 @@ get_gpo_exe(void)
 	return gpo_exe ? gpo_exe : "/usr/sbin/gpoa";
 }
 
-static int apply_gpo(const char *user)
+static int apply_gpo(const char *user, int flags)
 {
 	int status;
 	pid_t pid = fork();
@@ -78,7 +78,11 @@ static int apply_gpo(const char *user)
 	case -1:
 		return 1;
 	case 0:
+	if (flags & FLAG_FORCE) {
+		execl(exe, exe, "--force", user, NULL);
+	} else {
 		execl(exe, exe, user, NULL);
+	}
 		return 3;
 	default:
 		if (waitpid(pid, &status, 0) < 0)
@@ -137,7 +141,7 @@ gpupdate(const char *user, int flags)
 				return HANDLER_INVALID_INVOCATION;
 			}
 		}
-		ret = apply_gpo(user);
+		ret = apply_gpo(user, flags);
 		if (ret != 0) {
 			syslog(LOG_ERR,
 			       "error applying GPO for %s (error code %d)", log_user, ret);
@@ -156,10 +160,13 @@ main(int argc, char **argv)
 	openlog(PACKAGE "-gpupdate", LOG_PID, LOG_DAEMON);
 	gpo_exe = "/usr/sbin/gpoa";
 
-	while ((ret = getopt(argc, argv, "qp:")) != -1) {
+	while ((ret = getopt(argc, argv, "qfp:")) != -1) {
 		switch (ret) {
 		case 'q':
 			flags |= FLAG_QUIET;
+			break;
+		case 'f':
+			flags |= FLAG_FORCE;
 			break;
 		case 'p':
 			gpo_exe = optarg;
@@ -168,6 +175,7 @@ main(int argc, char **argv)
 			fprintf(stderr, "Valid options:\n"
 				"-q\tDo not print messages when applying "
 				"a policy.\n"
+				"-f\tForce GPT download.\n"
 				"-p PATH\tOverride the gpo applier "
 				"binary (\"%s\").\n", gpo_exe);
 			return 1;
