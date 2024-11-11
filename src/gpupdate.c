@@ -217,51 +217,109 @@ getFlags(int argc, char** argv, char** gpo_exe, char** loglevel, int *flags)
 int
 main(int argc, char **argv)
 {
-	char **oddjob_argv, *p;
-	int oddjob_argc, ret, flags = 0;
+	char *user = NULL, **oddjob_args, *stdin_args = NULL, *loglevel = NULL;
+	int flags = 0, oddjob_argc, ret = HANDLER_INVALID_INVOCATION;
 
 	openlog(PACKAGE "-gpupdate", LOG_PID, LOG_DAEMON);
-	gpo_exe = "/usr/sbin/gpoa";
 
-	while ((ret = getopt(argc, argv, "qfp:")) != -1) {
-		switch (ret) {
-		case 'q':
-			flags |= FLAG_QUIET;
-			break;
-		case 'f':
-			flags |= FLAG_FORCE;
-			break;
-		case 'p':
-			gpo_exe = optarg;
-			break;
-		default:
-			fprintf(stderr, "Valid options:\n"
-				"-q\tDo not print messages when applying "
-				"a policy.\n"
-				"-f\tForce GPT download.\n"
-				"-p PATH\tOverride the gpo applier "
-				"binary (\"%s\").\n", gpo_exe);
-			return 1;
+	oddjob_args = oddjob_collect_args(stdin);
+	for (oddjob_argc = 0; oddjob_args && oddjob_args[oddjob_argc]; ++oddjob_argc);
+
+	if (getFlags(argc, argv, &gpo_exe, &loglevel, &flags) == -1)
+	{
+		return ret;
+	}
+
+	if (flags & FLAG_STDIN)
+	{
+		// Parse args.
+		switch(oddjob_argc)
+		{
+			case 2:
+				user = oddjob_args[0];
+				stdin_args = oddjob_args[1];
+				break;
+			case 1:
+				stdin_args = oddjob_args[0];
+				break;
+			default:
+				syslog(LOG_ERR, "invoked with wrong arguments");
+
+				free(loglevel);
+				free(gpo_exe);
+
+				return ret;
 		}
+
+		if (!stdin_args || !*stdin_args)
+		{
+			syslog(LOG_ERR, "invoked with wrong arguments");
+
+			free(loglevel);
+			free(gpo_exe);
+
+			return ret;
+		}
+
+		size_t newArgc = 0;
+		// split stdin by ' '.
+		char** newArgv = make_argv(stdin_args, &newArgc, ' ');
+
+		// flags fallback
+		flags = FLAG_STDIN;
+
+		optind = 1;
+		// rerun getFlags with STDIN
+		if (getFlags(newArgc, newArgv, &gpo_exe, &loglevel, &flags) == -1)
+		{
+			return ret;
+		}
+
+		for (int i = newArgc; i > 0; --i)
+		{
+			free(newArgv[i - 1]);
+		}
+		free(newArgv);
 	}
-	ret = HANDLER_INVALID_INVOCATION;
-	oddjob_argv = oddjob_collect_args(stdin);
-	for (oddjob_argc = 0; (oddjob_argv != NULL) && (oddjob_argv[oddjob_argc] != NULL); oddjob_argc++) {
-		if (oddjob_argc > 1)
+	else switch(oddjob_argc)
+	{
+		case 1:
+			user = oddjob_args[0];
 			break;
+		case 0:
+			break;
+
+		default:
+			syslog(LOG_ERR, "invoked with wrong arguments");
+
+			free(loglevel);
+			free(gpo_exe);
+
+			return ret;
 	}
-	switch (oddjob_argc) {
-	case 0:
+
+	if (user)
+	{
+		if (strlen(user) == 0)
+		{
+			syslog(LOG_ERR, "invoked with wrong arguments");
+
+			free(loglevel);
+			free(gpo_exe);
+
+			return ret;
+		}
+		ret = gpupdate(user, flags);
+	}
+	else
+	{
 		ret = gpupdate(NULL, flags);
-		break;
-	case 1:
-		if (strlen(oddjob_argv[0]) > 0)
-			ret = gpupdate(oddjob_argv[0], flags);
-		break;
-	default:
-		syslog(LOG_ERR, "invoked with wrong arguments");
 	}
-	oddjob_free_args(oddjob_argv);
+
+	free(loglevel);
+	free(gpo_exe);
+
+	oddjob_free_args(oddjob_args);
 	closelog();
 	return ret;
 }
