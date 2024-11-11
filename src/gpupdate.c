@@ -94,11 +94,12 @@ static int apply_gpo(const char *user, int flags)
 
 /* Apply group policies via GPO applier. */
 static int
-gpupdate(const char *user, int flags)
+gpupdate(const char *user, int flags, char* loglevel)
 {
 	int ret;
 	struct stat st;
 	const char *log_user = user;
+	int i_loglevel = atoi(loglevel);
 
 	/* Now make sure that the user or computer
 	   a) no user (computer)
@@ -128,7 +129,7 @@ gpupdate(const char *user, int flags)
 	exe = get_gpo_exe();
 	if (exe != NULL) {
 		/* Set the text of the result message. */
-		if (!(flags & FLAG_QUIET)) {
+		if (!(i_loglevel < 4)) {
 			printf(_("Apply group policies for %s."), log_user);
 		}
 		syslog(LOG_NOTICE, "Apply group policies for %s.", log_user);
@@ -309,11 +310,11 @@ main(int argc, char **argv)
 
 			return ret;
 		}
-		ret = gpupdate(user, flags);
+		ret = gpupdate(user, flags, loglevel);
 	}
 	else
 	{
-		ret = gpupdate(NULL, flags);
+		ret = gpupdate(NULL, flags, loglevel);
 	}
 
 	free(loglevel);
