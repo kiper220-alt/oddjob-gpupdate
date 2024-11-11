@@ -53,9 +53,8 @@ static const char *exe;
 static const char *gpo_exe;
 static struct passwd *pwd;
 
-#define FLAG_QUIET	(1 << 1)
+#define FLAG_STDIN	(1 << 1)
 #define FLAG_FORCE	(1 << 2)
-#define FLAG_STDIN	(1 << 3)
 
 /*
  * get_gpo_dir
