@@ -70,7 +70,7 @@ get_gpo_exe(void)
 	return gpo_exe ? gpo_exe : "/usr/sbin/gpoa";
 }
 
-static int apply_gpo(const char *user, int flags)
+static int apply_gpo(const char *user, int flags, char* loglevel)
 {
 	int status;
 	pid_t pid = fork();
@@ -80,9 +80,9 @@ static int apply_gpo(const char *user, int flags)
 		return 1;
 	case 0:
 	if (flags & FLAG_FORCE) {
-		execl(exe, exe, "--force", user, NULL);
+		execl(exe, exe, "--force", "--loglevel", loglevel, user, NULL);
 	} else {
-		execl(exe, exe, user, NULL);
+		execl(exe, exe, "--loglevel", loglevel, user, NULL);
 	}
 		return 3;
 	default:
@@ -143,7 +143,7 @@ gpupdate(const char *user, int flags, char* loglevel)
 				return HANDLER_INVALID_INVOCATION;
 			}
 		}
-		ret = apply_gpo(user, flags);
+		ret = apply_gpo(user, flags, loglevel);
 		if (ret != 0) {
 			syslog(LOG_ERR,
 			       "error applying GPO for %s (error code %d)", log_user, ret);
