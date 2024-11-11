@@ -43,19 +43,6 @@
           <allow user="root"/>
         </method>
 
-        <method name="gpupdate_computer_force">
-          <helper exec="@mypkglibexecdir@/gpupdate -f"
-                  arguments="0"/>
-          <allow/>
-        </method>
-
-        <method name="gpupdate_force">
-          <helper exec="@mypkglibexecdir@/gpupdate -f"
-                  arguments="0"
-                  prepend_user_name="yes"/>
-          <allow/>
-        </method>
-
       </interface>
 
     </object>
