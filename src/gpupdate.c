@@ -55,6 +55,7 @@ static struct passwd *pwd;
 
 #define FLAG_QUIET	(1 << 1)
 #define FLAG_FORCE	(1 << 2)
+#define FLAG_STDIN	(1 << 3)
 
 /*
  * get_gpo_dir
@@ -148,6 +149,68 @@ gpupdate(const char *user, int flags)
 			return HANDLER_FAILURE;
 		}
 	}
+	return 0;
+}
+
+int
+getFlags(int argc, char** argv, char** gpo_exe, char** loglevel, int *flags)
+{
+	if (argc == 0)
+	{
+		return 0;
+	}
+	if (!argv || !gpo_exe || !gpo_exe || !loglevel || !flags)
+	{
+		return -1;
+	}
+
+	if (*gpo_exe)
+	{
+		free(*gpo_exe);
+	}
+	(*gpo_exe) = strdup("/usr/sbin/gpoa");
+	if (*loglevel)
+	{
+		free(*loglevel);
+	}
+	(*loglevel) = strdup("4");
+
+	int ret;
+	while ((ret = getopt(argc, argv, "ifl:p:")) != -1)
+	{
+		switch (ret){
+			case 'f':
+				(*flags) |= FLAG_FORCE;
+				break;
+			case 'p':
+				if (*gpo_exe)
+				{
+					free(*gpo_exe);
+				}
+				(*gpo_exe) = strdup(optarg);
+				break;
+			case 'i': {
+				(*flags) |= FLAG_STDIN;
+				break;
+			}
+			case 'l':
+				if (*loglevel)
+				{
+					free(*loglevel);
+				}
+				(*loglevel) = strdup(optarg);
+				break;
+		default:
+			fprintf(stderr, "Valid options:\n"
+				"-q\tDo not print messages when applying "
+				"a policy.\n"
+				"-f\tForce GPT download.\n"
+				"-p PATH\tOverride the gpo applier "
+				"binary (\"%s\").\n", *gpo_exe);
+			return -1;
+		}
+	}
+
 	return 0;
 }
 
