@@ -50,7 +50,7 @@
 
 #define _(_x) _x
 static const char *exe;
-static const char *gpo_exe;
+static char *gpo_exe;
 static struct passwd *pwd;
 
 #define FLAG_STDIN	(1 << 1)
